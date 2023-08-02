@@ -5,19 +5,21 @@ import (
 	"sync"
 )
 
-type InstanceWrapper struct {
+type Shard struct {
 	ins   *wrapper.Instance
 	start int64
-	end   int64
 	path  string
 }
 
 type Warehouse struct {
 	cmtx *sync.RWMutex
 	pmtx *sync.RWMutex
-	cur  *InstanceWrapper
-	ch   chan *InstanceWrapper
-	prev []*InstanceWrapper
+	cur  *Shard
+	shards []*Shard
+	workdir string
+	datadir string
+	ip string
+	ch   chan *Shard
 }
 
 func (w *Warehouse) Rotate() {

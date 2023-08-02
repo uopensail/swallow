@@ -1,0 +1,14 @@
+syntax = "proto3";
+package api;
+
+message Request {
+  repeated string data = 1;
+}
+
+message Response {
+  int32 code = 1;
+}
+
+service SwallowService {
+  rpc Put(Request) returns (Response) {}
+}
