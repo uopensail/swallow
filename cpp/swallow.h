@@ -23,12 +23,12 @@ extern "C" {
 
 void *swallow_open(void *dir, unsigned long long len);
 void swallow_close(void *ins);
-void *swallow_put(void *ins, void *req);
+void swallow_put(void *ins, void *req);
 void swallow_compact(void *ins);
 void *swallow_new_request();
 void swallow_del_request(void *req);
 void swallow_request_append(void *req, void *key, unsigned long long klen,
-                            void *value, unsigned long vlen);
+                            void *value, unsigned long long vlen);
 
 #ifdef __cplusplus
 } /* end extern "C"*/

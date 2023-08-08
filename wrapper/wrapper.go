@@ -16,6 +16,9 @@ type Instance struct {
 
 func NewInstance(dir string) *Instance {
 	ptr := C.swallow_open(unsafe.Pointer(&dir), C.ulonglong(len(dir)))
+	if ptr == nil {
+		return nil
+	}
 	return &Instance{
 		ptr: ptr,
 	}
