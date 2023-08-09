@@ -13,6 +13,8 @@ import (
 	"unsafe"
 
 	"github.com/tidwall/gjson"
+	"github.com/uopensail/ulib/prome"
+	"github.com/uopensail/ulib/utils"
 )
 
 const success = "SUCCESS"
@@ -35,7 +37,7 @@ type Warehouse struct {
 }
 
 func NewWarehouse(workdir, pk string) *Warehouse {
-	ip, _ := externalIP()
+	ip, _ := utils.GetLocalIp()
 	dataDir := path.Join(workdir, ip)
 	if _, err := os.Stat(dataDir); os.IsNotExist(err) {
 		if err := os.Mkdir(dataDir, 0755); err != nil {
@@ -75,6 +77,8 @@ func NewWarehouse(workdir, pk string) *Warehouse {
 }
 
 func (w *Warehouse) rotate() {
+	stat := prome.NewStat("warehouse.rotate")
+	defer stat.End()
 	ts := time.Now().Unix()
 	dataDir := path.Join(w.workdir, w.ip, fmt.Sprintf("%d", ts))
 	shard := &Shard{
@@ -97,6 +101,8 @@ func (w *Warehouse) compact() {
 		case <-ticker.C:
 			continue
 		case shard := <-w.ch:
+			stat := prome.NewStat("warehouse.compact")
+			defer stat.End()
 			shard.ins.Compact()
 			shard.ins.Close()
 			markSuccess(path.Join(shard.path, success))
@@ -114,6 +120,8 @@ func (w *Warehouse) run() {
 }
 
 func (w *Warehouse) Put(req *api.Request) {
+	stat := prome.NewStat("warehouse.Put")
+	defer stat.End()
 	keys := make([]string, 0, len(req.Data))
 	ts := time.Now().Unix()
 	rd := rand.Int63n(1000000)
@@ -123,6 +131,7 @@ func (w *Warehouse) Put(req *api.Request) {
 			gjson.GetBytes(*(*[]byte)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&req.Data[i])).Data)), w.pk).String(),
 			ts, rd, i))
 	}
+	stat.SetCounter(len(req.Data))
 	w.RLock()
 	defer w.RUnlock()
 	w.cur.ins.Put(keys, req.Data)

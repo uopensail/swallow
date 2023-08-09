@@ -1,12 +1,14 @@
 package warehouse
 
 import (
-	"errors"
-	"net"
 	"os"
 	"path"
 	"strconv"
 	"swallow/wrapper"
+
+	"github.com/uopensail/ulib/prome"
+	"github.com/uopensail/ulib/zlog"
+	"go.uber.org/zap"
 )
 
 func markSuccess(file string) {
@@ -17,46 +19,13 @@ func markSuccess(file string) {
 	defer f.Close()
 }
 
-func externalIP() (string, error) {
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		return "", err
-	}
-	for _, iface := range ifaces {
-		if iface.Flags&net.FlagUp == 0 {
-			continue // interface down
-		}
-		if iface.Flags&net.FlagLoopback != 0 {
-			continue // loopback interface
-		}
-		addrs, err := iface.Addrs()
-		if err != nil {
-			return "", err
-		}
-		for _, addr := range addrs {
-			var ip net.IP
-			switch v := addr.(type) {
-			case *net.IPNet:
-				ip = v.IP
-			case *net.IPAddr:
-				ip = v.IP
-			}
-			if ip == nil || ip.IsLoopback() {
-				continue
-			}
-			ip = ip.To4()
-			if ip == nil {
-				continue // not an ipv4 address
-			}
-			return ip.String(), nil
-		}
-	}
-	return "", errors.New("are you connected to the network?")
-}
-
 func listShards(dir string) []*Shard {
+	stat := prome.NewStat("warehouse.listShards")
+	defer stat.End()
 	files, err := os.ReadDir(dir)
 	if err != nil {
+		stat.MarkErr()
+		zlog.LOG.Error("list shards error", zap.String("dir", dir))
 		return nil
 	}
 	ret := make([]*Shard, 0, len(files))
@@ -77,6 +46,6 @@ func listShards(dir string) []*Shard {
 			})
 		}
 	}
-
+	stat.SetCounter(len(ret))
 	return ret
 }

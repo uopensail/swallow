@@ -18,7 +18,7 @@ import (
 func runGRPC(app *app.App) {
 	go func() {
 		grpcServer := grpc.NewServer()
-		//添加监控检测服务
+		// health check
 		grpc_health_v1.RegisterHealthServer(grpcServer, app)
 		app.GRPCAPIRegister(grpcServer)
 		listener, err := net.Listen("tcp", fmt.Sprintf(":%d", config.AppConf.GRPCPort))
