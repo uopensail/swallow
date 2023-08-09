@@ -5,12 +5,10 @@ import (
 	"math/rand"
 	"os"
 	"path"
-	"reflect"
 	"swallow/api"
 	"swallow/wrapper"
 	"sync"
 	"time"
-	"unsafe"
 
 	"github.com/tidwall/gjson"
 	"github.com/uopensail/ulib/prome"
@@ -128,7 +126,7 @@ func (w *Warehouse) Put(req *api.Request) {
 
 	for i := 0; i < len(req.Data); i++ {
 		keys = append(keys, fmt.Sprintf("%s|%d|%d-%d",
-			gjson.GetBytes(*(*[]byte)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&req.Data[i])).Data)), w.pk).String(),
+			gjson.GetBytes(wrapper.Str2bytes(req.Data[i]), w.pk).String(),
 			ts, rd, i))
 	}
 	stat.SetCounter(len(req.Data))

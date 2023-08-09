@@ -2,11 +2,12 @@ package app
 
 import (
 	"context"
+	"net/http"
 	"swallow/api"
 	"swallow/config"
 	"swallow/warehouse"
 
-	"github.com/labstack/echo/v4"
+	"github.com/gin-gonic/gin"
 	"github.com/uopensail/ulib/prome"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
@@ -32,10 +33,10 @@ func (app *App) Close() {
 	app.w.Close()
 }
 
-func (app *App) EchoAPIRegister(e *echo.Echo) {
-	e.POST("/put", app.PutEchoHandler)
-	e.POST("/", app.PingEchoHandler)
-	e.POST("/version", app.VersionEchoHandler)
+func (app *App) RegisterGinRouter(ginEngine *gin.Engine) {
+	ginEngine.POST("/put", app.PutEchoHandler)
+	ginEngine.GET("/", app.PingEchoHandler)
+	ginEngine.GET("/version", app.VersionEchoHandler)
 }
 
 func (app *App) Put(ctx context.Context, in *api.Request) (*api.Response, error) {
@@ -47,28 +48,33 @@ func (app *App) Put(ctx context.Context, in *api.Request) (*api.Response, error)
 	}, nil
 }
 
-func (app *App) PutEchoHandler(c echo.Context) (err error) {
+func (app *App) PutEchoHandler(gCtx *gin.Context) {
 	stat := prome.NewStat("App.PutEchoHandler")
 	defer stat.End()
 	request := &api.Request{}
-	if err = c.Bind(request); err != nil {
+	if err := gCtx.ShouldBind(&request); err != nil {
 		stat.MarkErr()
-		return err
+		gCtx.JSON(http.StatusInternalServerError, api.Response{
+			Code: -1,
+		})
+		return
 	}
+
 	response, err := app.Put(context.Background(), request)
 	if err != nil {
 		stat.MarkErr()
-		return err
+		return
 	}
-	return c.JSON(200, response)
+	gCtx.JSON(http.StatusOK, response)
+	return
 }
 
-func (app *App) PingEchoHandler(c echo.Context) (err error) {
-	return c.JSON(200, "OK")
+func (app *App) PingEchoHandler(gCtx *gin.Context) {
+	gCtx.String(http.StatusOK, "OK")
 }
 
-func (app *App) VersionEchoHandler(c echo.Context) (err error) {
-	return c.JSON(200, __GITHASH__)
+func (app *App) VersionEchoHandler(gCtx *gin.Context) {
+	gCtx.String(http.StatusOK, __GITHASH__)
 }
 
 func (app *App) Check(ctx context.Context, req *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
