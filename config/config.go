@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"io/ioutil"
 
 	"github.com/BurntSushi/toml"
@@ -14,14 +15,18 @@ type AppConfig struct {
 	PrimaryKey                string `json:"primary_key" toml:"primary_key"`
 }
 
-func (config *AppConfig) Init(configPath string) {
-	data, err := ioutil.ReadFile(configPath)
-	if err != nil {
-		panic(err)
-	}
-	if _, err = toml.Decode(string(data), config); err != nil {
-		panic(err)
-	}
-}
+var AppConfigInstance AppConfig
 
-var AppConf AppConfig
+func (conf *AppConfig) Init(filePath string) {
+	fData, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		fmt.Errorf("ioutil.ReadFile error: %s", err)
+		panic(err)
+	}
+	_, err = toml.Decode(string(fData), conf)
+	if err != nil {
+		fmt.Errorf("Unmarshal error: %s", err)
+		panic(err)
+	}
+	fmt.Printf("InitAppConfig:%v yaml:%s\n", conf, string(fData))
+}

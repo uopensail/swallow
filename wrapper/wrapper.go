@@ -38,12 +38,14 @@ func NewInstance(dir string) *Instance {
 	}
 }
 
-func (ins *Instance) Put(keys, values []string) {
+func (ins *Instance) Put(keys, values [][]byte) {
 	req := C.swallow_new_request()
 	defer C.swallow_del_request(req)
 	for i := 0; i < len(keys); i++ {
-		C.swallow_request_append(req, unsafe.Pointer(&Str2bytes(keys[i])[0]), C.ulonglong(len(keys[i])),
-			unsafe.Pointer(&Str2bytes(values[i])[0]), C.ulonglong(len(values[i])))
+		kb := keys[i]
+		vb := values[i]
+		C.swallow_request_append(req, unsafe.Pointer(&kb[0]), C.ulonglong(len(kb)),
+			unsafe.Pointer(&vb[0]), C.ulonglong(len(vb)))
 	}
 	C.swallow_put(ins.ptr, req)
 }

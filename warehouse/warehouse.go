@@ -5,12 +5,12 @@ import (
 	"math/rand"
 	"os"
 	"path"
-	"swallow/api"
 	"swallow/wrapper"
 	"sync"
 	"time"
 
 	"github.com/tidwall/gjson"
+	"github.com/uopensail/swallow-idl/proto/swallowapi"
 	"github.com/uopensail/ulib/prome"
 	"github.com/uopensail/ulib/utils"
 )
@@ -117,22 +117,40 @@ func (w *Warehouse) run() {
 	}
 }
 
-func (w *Warehouse) Put(req *api.Request) {
+func (w *Warehouse) Trace(kvs []*swallowapi.KV) {
 	stat := prome.NewStat("warehouse.Put")
 	defer stat.End()
-	keys := make([]string, 0, len(req.Data))
-	ts := time.Now().Unix()
-	rd := rand.Int63n(1000000)
+	keys := make([][]byte, len(kvs))
+	vs := make([][]byte, len(kvs))
 
-	for i := 0; i < len(req.Data); i++ {
-		keys = append(keys, fmt.Sprintf("%s|%d|%d-%d",
-			gjson.GetBytes(wrapper.Str2bytes(req.Data[i]), w.pk).String(),
-			ts, rd, i))
+	for i := 0; i < len(kvs); i++ {
+		keys[i] = kvs[i].Key
+		vs[i] = kvs[i].Value
 	}
-	stat.SetCounter(len(req.Data))
+	stat.SetCounter(len(kvs))
 	w.RLock()
 	defer w.RUnlock()
-	w.cur.ins.Put(keys, req.Data)
+	w.cur.ins.Put(keys, vs)
+}
+
+func (w *Warehouse) Log(kvs []*swallowapi.KV) {
+	stat := prome.NewStat("warehouse.Put")
+	defer stat.End()
+	keys := make([][]byte, len(kvs))
+	vs := make([][]byte, len(kvs))
+	ts := time.Now().UnixNano()
+	rd := rand.Int63n(1000000)
+
+	for i := 0; i < len(kvs); i++ {
+		vs[i] = kvs[i].Value
+		keys[i] = []byte(fmt.Sprintf("%s|%d|%d-%d",
+			gjson.GetBytes(vs[i], w.pk).String(), ts, rd, i))
+
+	}
+	stat.SetCounter(len(kvs))
+	w.RLock()
+	defer w.RUnlock()
+	w.cur.ins.Put(keys, vs)
 }
 
 func (w *Warehouse) Close() {
